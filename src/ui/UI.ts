@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
 import { SlotMachine } from '../slots/SlotMachine';
 import { AssetLoader } from '../utils/AssetLoader';
-import { sound } from '../utils/sound';
+import { Sound } from '../utils/Sound';
 
 export class UI {
     public container: PIXI.Container;
@@ -43,7 +43,7 @@ export class UI {
     }
 
     private onSpinButtonClick(): void {
-        sound.play('Spin button');
+        Sound.play('spinButton');
 
         this.slotMachine.spin();
     }

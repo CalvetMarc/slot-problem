@@ -1,24 +1,52 @@
 import { Howl } from 'howler';
 
-type SoundMap = Record<string, Howl>;
-const sounds: SoundMap = {};
+const SOUNDS = {
+    spin: 'Reel spin.webm',
+    win: 'win.webm',
+    spinButton: 'Spin button.webm',
+} as const;
 
-// TODO: Implement sound player using the "howler" package
-export const sound = {
-    add: (alias: string, url: string): void => {
-        if (sounds[alias]) return;
+type SoundKey = keyof typeof SOUNDS;
 
-        sounds[alias] = new Howl({
-            src: [url],
-            preload: true,
-            volume: 1
-        });
-    },
-    play: (alias: string): void => {
-        const snd = sounds[alias];
+// Implement sound player using the "howler" package
+export class Sound {
+    private static sounds: Partial<Record<SoundKey, Howl>> = {};
+    private static readonly BASE_PATH = 'assets/sounds/';
+
+    private static loaded = false;
+
+    static load(): void {
+        if(this.loaded) return;
+
+        for (const [alias, file] of Object.entries(SOUNDS)) {
+            this.add(alias as SoundKey, file);
+        }
+
+        this.loaded = true;
+    }  
+
+    static play(alias: SoundKey): void {
+        const snd = this.sounds[alias];
+        if (!snd) return;
+
+        snd.play();
+    }
+
+    static stop(alias: SoundKey): void {
+        const snd = this.sounds[alias];
         if (!snd) return;
 
         snd.stop();
-        snd.play();
-    }    
-};
+    }
+
+    private static add(alias: SoundKey, url: string): void {
+        if (this.sounds[alias]) return;
+
+        this.sounds[alias] = new Howl({
+            src: [this.BASE_PATH + url],
+            preload: true,
+            html5: true,
+            volume: 1
+        });
+    }
+}
