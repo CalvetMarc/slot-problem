@@ -1,12 +1,13 @@
 import * as PIXI from 'pixi.js';
 import { AssetLoader } from '../utils/AssetLoader';
+import { ImagesKey } from '../assets/manifest';
 
-const SYMBOL_TEXTURES = [
-    'symbol1.png',
-    'symbol2.png',
-    'symbol3.png',
-    'symbol4.png',
-    'symbol5.png',
+const SYMBOL_KEYS: ImagesKey[] = [
+    'symbol1',
+    'symbol2',
+    'symbol3',
+    'symbol4',
+    'symbol5',
 ];
 
 const SYMBOL_SIZE = 150;
@@ -71,8 +72,8 @@ export class Reel {
 
     private getRandomTexture(): PIXI.Texture{
         // Get a random symbol texture
-        const index = Math.floor(Math.random() * SYMBOL_TEXTURES.length);
-        return AssetLoader.getTexture(SYMBOL_TEXTURES[index]);
+        const index = Math.floor(Math.random() * SYMBOL_KEYS.length);
+        return AssetLoader.getTexture(SYMBOL_KEYS[index]);
     }    
 
     public update(delta: number): void {

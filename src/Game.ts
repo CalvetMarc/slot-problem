@@ -7,7 +7,6 @@ export class Game {
     private app: PIXI.Application;
     private slotMachine!: SlotMachine;
     private ui!: UI;
-    private assetLoader: AssetLoader;
 
     constructor() {
         this.app = new PIXI.Application({
@@ -23,8 +22,6 @@ export class Game {
             gameContainer.appendChild(this.app.view as HTMLCanvasElement);
         }
 
-        this.assetLoader = new AssetLoader();
-
         this.init = this.init.bind(this);
         this.resize = this.resize.bind(this);
 
@@ -35,7 +32,7 @@ export class Game {
 
     public async init(): Promise<void> {
         try {
-            await this.assetLoader.loadAssets();
+            await AssetLoader.loadAssets();
 
             this.slotMachine = new SlotMachine(this.app);
             this.app.stage.addChild(this.slotMachine.container);

@@ -56,9 +56,9 @@ export class SlotMachine {
 
     private initSpineAnimations(): void {
         try {
-            const frameSpineData = AssetLoader.getSpine('base-feature-frame.json');
+            const frameSpineData = AssetLoader.getSpine('frame');
             if (frameSpineData) {
-                this.frameSpine = new Spine(frameSpineData.spineData);                
+                this.frameSpine = new Spine(frameSpineData);                
 
                 if (this.frameSpine.state.hasAnimation('idle')) {
                     this.frameSpine.state.setAnimation(0, 'idle', true);
@@ -67,9 +67,9 @@ export class SlotMachine {
                 this.container.addChild(this.frameSpine);
             }
 
-            const winSpineData = AssetLoader.getSpine('big-boom-h.json');
+            const winSpineData = AssetLoader.getSpine('win');
             if (winSpineData) {
-                this.winAnimation = new Spine(winSpineData.spineData); 
+                this.winAnimation = new Spine(winSpineData); 
 
                 this.winAnimation.visible = false;
 
@@ -84,7 +84,7 @@ export class SlotMachine {
         try {
             const bounds = this.frameSpine!.getLocalBounds();      
 
-            this.background = new PIXI.Sprite(AssetLoader.getTexture('background.png'));
+            this.background = new PIXI.Sprite(AssetLoader.getTexture('background'));
             this.background.anchor.set(0.5);
 
             this.background.position.set(this.frameSpine!.x, this.frameSpine!.y);
@@ -156,7 +156,7 @@ export class SlotMachine {
 
         // Disable spin button
         if (this.spinButton) {
-            this.spinButton.texture = AssetLoader.getTexture('button_spin_disabled.png');
+            this.spinButton.texture = AssetLoader.getTexture('spinButtonInactive');
             this.spinButton.interactive = false;
         }
 
@@ -186,7 +186,7 @@ export class SlotMachine {
                         this.isSpinning = false;
 
                         if (this.spinButton) {
-                            this.spinButton.texture = AssetLoader.getTexture('button_spin.png');
+                            this.spinButton.texture = AssetLoader.getTexture('spinButtonActive');
                             this.spinButton.interactive = true;
                         }
                     }, 500);
