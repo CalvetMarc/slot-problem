@@ -6,59 +6,135 @@ import { AssetLoader } from '../utils/AssetLoader';
 import {Spine} from "pixi-spine";
 
 const REEL_COUNT = 4;
-const SYMBOLS_PER_REEL = 6;
-const SYMBOL_SIZE = 150;
-const REEL_HEIGHT = SYMBOL_SIZE;
-const REEL_SPACING = 10;
+
+const TOP_CONTENT_MARGIN = 55;
+const BOTTOM_CONTENT_MARGIN = 50;
+
+const BACKGROUND_COVER_MARGIN_X = 30;
+const BACKGROUND_COVER_MARGIN_Y = 30;
+
+const HORIZONTAL_CONTENT_MARGIN = 100;
 
 export class SlotMachine {
     public container: PIXI.Container;
-    private reels: Reel[];
+
     private app: PIXI.Application;
-    private isSpinning: boolean = false;
-    private spinButton: PIXI.Sprite | null = null;
-    private frameSpine: Spine | null = null;
+    private contentContainer: PIXI.Container;
+    private reels: Reel[];
+
     private winAnimation: Spine | null = null;
+    private frameSpine: Spine | null = null;
+    private background!: PIXI.Sprite;
+    private spinButton: PIXI.Sprite | null = null;
+
+    private displayAreaWidth!: number;
+    private displayAreaHeight!: number;
+
+    private isSpinning: boolean = false;
 
     constructor(app: PIXI.Application) {
         this.app = app;
         this.container = new PIXI.Container();
+        this.contentContainer = new PIXI.Container();
+
+        this.container.addChild(this.contentContainer);
+
         this.reels = [];
 
         // Center the slot machine
-        this.container.x = this.app.screen.width / 2 - ((SYMBOL_SIZE * SYMBOLS_PER_REEL) / 2);
-        this.container.y = this.app.screen.height / 2 - ((REEL_HEIGHT * REEL_COUNT + REEL_SPACING * (REEL_COUNT - 1)) / 2);
-
-        this.createBackground();
-
-        this.createReels();
-
+        this.container.x = this.app.screen.width / 2;
+        this.container.y = this.app.screen.height / 2;
+        
         this.initSpineAnimations();
+
+        this.createBackground();      
+
+        this.applyFrameMask();
+
+        this.createReels(); 
+    }    
+
+    private initSpineAnimations(): void {
+        try {
+            const frameSpineData = AssetLoader.getSpine('base-feature-frame.json');
+            if (frameSpineData) {
+                this.frameSpine = new Spine(frameSpineData.spineData);                
+
+                if (this.frameSpine.state.hasAnimation('idle')) {
+                    this.frameSpine.state.setAnimation(0, 'idle', true);
+                }
+
+                this.container.addChild(this.frameSpine);
+            }
+
+            const winSpineData = AssetLoader.getSpine('big-boom-h.json');
+            if (winSpineData) {
+                this.winAnimation = new Spine(winSpineData.spineData); 
+
+                this.winAnimation.visible = false;
+
+                this.container.addChild(this.winAnimation);
+            }
+        } catch (error) {
+            console.error('Error initializing spine animations:', error);
+        }
     }
 
     private createBackground(): void {
         try {
-            const background = new PIXI.Graphics();
-            background.beginFill(0x000000, 0.5);
-            background.drawRect(
-                -20,
-                -20,
-                SYMBOL_SIZE * SYMBOLS_PER_REEL + 40, // Width now based on symbols per reel
-                REEL_HEIGHT * REEL_COUNT + REEL_SPACING * (REEL_COUNT - 1) + 40 // Height based on reel count
-            );
-            background.endFill();
-            this.container.addChild(background);
+            const bounds = this.frameSpine!.getLocalBounds();      
+
+            this.background = new PIXI.Sprite(AssetLoader.getTexture('background.png'));
+            this.background.anchor.set(0.5);
+
+            this.background.position.set(this.frameSpine!.x, this.frameSpine!.y);
+
+            const innerW = bounds.width - BACKGROUND_COVER_MARGIN_X * 2;
+            const innerH = bounds.height - BACKGROUND_COVER_MARGIN_Y * 2;
+
+            //Scale the background to cover the frame
+            const scale = Math.max(innerW / this.background.texture.width, innerH / this.background.texture.height);
+            this.background.scale.set(scale);
+
+            this.contentContainer.addChild(this.background);
         } catch (error) {
             console.error('Error creating background:', error);
         }
     }
 
-    private createReels(): void {
-        // Create each reel
+    private applyFrameMask(): void {
+        if (!this.frameSpine || !this.background) return;
+
+        const bounds = this.frameSpine.getLocalBounds();        
+
+        //Create a mask to hide overflowing symbols
+        const mask = new PIXI.Graphics();
+        mask.beginFill(0xffffff);
+
+        mask.drawRect(bounds.x + BACKGROUND_COVER_MARGIN_X, bounds.y + BACKGROUND_COVER_MARGIN_Y, 
+            bounds.width - (BACKGROUND_COVER_MARGIN_X * 2), bounds.height - (BACKGROUND_COVER_MARGIN_Y * 2));
+
+        mask.endFill();
+
+        mask.x = this.frameSpine.x;
+        mask.y = this.frameSpine.y;
+
+        this.contentContainer.addChild(mask);
+        this.contentContainer.mask = mask;
+
+        this.displayAreaWidth = mask.width - (2 * HORIZONTAL_CONTENT_MARGIN);
+        this.displayAreaHeight = mask.height - (2 * (TOP_CONTENT_MARGIN + BOTTOM_CONTENT_MARGIN));
+    }
+
+    private createReels(): void {        
+        // Create each reel       
         for (let i = 0; i < REEL_COUNT; i++) {
-            const reel = new Reel(SYMBOLS_PER_REEL, SYMBOL_SIZE);
-            reel.container.y = i * (REEL_HEIGHT + REEL_SPACING);
-            this.container.addChild(reel.container);
+            const reel = new Reel(this.displayAreaWidth);
+            this.contentContainer.addChild(reel.container);
+
+            const verticalOffset = TOP_CONTENT_MARGIN - BOTTOM_CONTENT_MARGIN;
+            reel.container.position.set(-this.displayAreaWidth / 2, (-this.displayAreaHeight / 2) + verticalOffset + (i * (this.displayAreaHeight / (REEL_COUNT - 1))));
+
             this.reels.push(reel);
         }
     }
@@ -150,37 +226,6 @@ export class SlotMachine {
 
     public setSpinButton(button: PIXI.Sprite): void {
         this.spinButton = button;
-    }
+    }    
 
-    private initSpineAnimations(): void {
-        try {
-            const frameSpineData = AssetLoader.getSpine('base-feature-frame.json');
-            if (frameSpineData) {
-                this.frameSpine = new Spine(frameSpineData.spineData);
-
-                this.frameSpine.y = (REEL_HEIGHT * REEL_COUNT + REEL_SPACING * (REEL_COUNT - 1)) / 2;
-                this.frameSpine.x = (SYMBOL_SIZE * SYMBOLS_PER_REEL) / 2;
-
-                if (this.frameSpine.state.hasAnimation('idle')) {
-                    this.frameSpine.state.setAnimation(0, 'idle', true);
-                }
-
-                this.container.addChild(this.frameSpine);
-            }
-
-            const winSpineData = AssetLoader.getSpine('big-boom-h.json');
-            if (winSpineData) {
-                this.winAnimation = new Spine(winSpineData.spineData);
-               
-                this.winAnimation.y = (REEL_HEIGHT * REEL_COUNT + REEL_SPACING * (REEL_COUNT - 1)) / 2;
-                this.winAnimation.x = (SYMBOL_SIZE * SYMBOLS_PER_REEL) / 2;
-
-                this.winAnimation.visible = false;
-
-                this.container.addChild(this.winAnimation);
-            }
-        } catch (error) {
-            console.error('Error initializing spine animations:', error);
-        }
-    }
 }

@@ -9,30 +9,35 @@ const SYMBOL_TEXTURES = [
     'symbol5.png',
 ];
 
+const SYMBOL_SIZE = 150;
+const SYMBOLS_PER_REEL = 6;
+const EXTRA_SYMBOLS = 1; // Extra symbols to allow seamless horizontal looping 
+
 const SPIN_SPEED = 50; // Pixels per frame
 const SLOWDOWN_RATE = 0.95; // Rate at which the reel slows down
-const EXTRA_SYMBOLS = 2; // Extra symbols to allow seamless horizontal looping 
 
 export class Reel {
     public container: PIXI.Container;
 
     private symbols: PIXI.Sprite[];
-    private symbolSize: number;
     private totalSymbolCount: number;
     private speed: number = 0;
     private isSpinning: boolean = false;
 
+    private symbolsSpacing: number;
+
     private leftLimit: number;
     private rightLimit: number;
 
-    constructor(symbolCount: number, symbolSize: number) {
+    constructor(displayWidthArea: number) {
         this.container = new PIXI.Container();
         this.symbols = [];
-        this.symbolSize = symbolSize;
-        this.totalSymbolCount = symbolCount + EXTRA_SYMBOLS;
 
-        this.leftLimit = -symbolSize * 0.5;
-        this.rightLimit = (this.symbolSize * (this.totalSymbolCount - 1)) + (this.symbolSize * 0.5);
+        this.symbolsSpacing = displayWidthArea / (SYMBOLS_PER_REEL - 1);
+        this.totalSymbolCount = SYMBOLS_PER_REEL + EXTRA_SYMBOLS;
+
+        this.leftLimit = -this.symbolsSpacing;
+        this.rightLimit = this.symbolsSpacing * (this.totalSymbolCount - 1);
 
         this.createSymbols();       
     }
@@ -48,21 +53,27 @@ export class Reel {
         }
     }
 
-    private createRandomSymbol(): PIXI.Sprite {
-        // Get a random symbol texture
-        const newTexture = this.getRandomTexture();
-        
+    private createRandomSymbol(): PIXI.Sprite {     
         // Create a sprite with the texture
-        const newSprite = new PIXI.Sprite(newTexture);
-        newSprite.anchor.set(0.5);
+        const newSprite = new PIXI.Sprite();
+        this.assignRandomTexture(newSprite);
 
         return newSprite;
     }
 
+    private assignRandomTexture(symbol: PIXI.Sprite): void{
+        const newTexture = this.getRandomTexture();
+        symbol.texture = newTexture;
+
+        symbol.anchor.set(0.5);
+        symbol.scale.set(SYMBOL_SIZE / newTexture.width);
+    }
+
     private getRandomTexture(): PIXI.Texture{
+        // Get a random symbol texture
         const index = Math.floor(Math.random() * SYMBOL_TEXTURES.length);
         return AssetLoader.getTexture(SYMBOL_TEXTURES[index]);
-    }
+    }    
 
     public update(delta: number): void {
         if (!this.isSpinning && this.speed === 0) return;
@@ -102,7 +113,7 @@ export class Reel {
     }
 
     private snapToColumn(symbol: PIXI.Sprite, index: number): void{
-        symbol.position.set((this.symbolSize * index) + (this.symbolSize * 0.5), (this.symbolSize * 0.5));
+       symbol.position.set(this.symbolsSpacing * index, 0);
     }
 
     private recycleSymbol(symbol: PIXI.Sprite, offsetDistance: number): void{    
@@ -113,7 +124,8 @@ export class Reel {
         x = ((x - this.leftLimit) % loopWidth + loopWidth) % loopWidth + this.leftLimit;
 
         symbol.position.x = x;
-        symbol.texture = this.getRandomTexture();
+
+        this.assignRandomTexture(symbol);
     }
 
     public startSpin(): void {
