@@ -17,6 +17,8 @@ const EXTRA_SYMBOLS = 1; // Extra symbols to allow seamless horizontal looping
 const SPIN_SPEED = 50; // Pixels per frame
 const SLOWDOWN_RATE = 0.95; // Rate at which the reel slows down
 
+const STOP_REEL_THRESHOLD = 0.5; // Speed below which the reel stops
+
 export class Reel {
     public container: PIXI.Container;
 
@@ -94,10 +96,10 @@ export class Reel {
 
         // If we're stopping, slow down the reel
         if (!this.isSpinning && this.speed > 0) {
-            this.speed *= SLOWDOWN_RATE;
+            this.speed *= Math.pow(SLOWDOWN_RATE, delta);
 
             // If speed is very low, stop completely and snap to grid
-            if (this.speed < 0.5) {
+            if (this.speed < STOP_REEL_THRESHOLD) {
                 this.speed = 0;
                 this.snapToGrid();
             }
