@@ -1,7 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { SlotMachine } from './slots/SlotMachine';
 import { AssetLoader } from './utils/AssetLoader';
-import { UI } from './ui/UI';
+import { Button } from './ui/Button';
+import { GameEvents } from './utils/GameEvents';
 
 const baseWidth = 1280;
 const baseHeight = 800;
@@ -10,7 +11,7 @@ export class Game {
     private app: PIXI.Application;
     private gameRoot!: PIXI.Container;
     private slotMachine!: SlotMachine;
-    private ui!: UI;
+    private spinButton!: Button;
 
     constructor() {
         this.app = new PIXI.Application({
@@ -39,11 +40,22 @@ export class Game {
             this.gameRoot = new PIXI.Container();
             this.app.stage.addChild(this.gameRoot);
 
-            this.slotMachine = new SlotMachine(this.app);
-            this.gameRoot.addChild(this.slotMachine.container);
+            this.slotMachine = new SlotMachine();
+            this.gameRoot.addChild(this.slotMachine);
+            // Center the slot machine
+            this.slotMachine.x = this.app.screen.width / 2;
+            this.slotMachine.y = this.app.screen.height / 2;        
 
-            this.ui = new UI(this.app, this.slotMachine);
-            this.gameRoot.addChild(this.ui.container);
+            this.spinButton = new Button();
+            this.gameRoot.addChild(this.spinButton);
+            // Center the button horizontally
+            this.spinButton.x = this.app.screen.width / 2;
+            this.spinButton.y = this.app.screen.height - 50;
+
+            //Handle Events
+            this.slotMachine.on(GameEvents.SpinStarted, this.spinButton.disable);
+            this.slotMachine.on(GameEvents.SpinFinished, this.spinButton.enable);
+            this.spinButton.on(GameEvents.SpinRequested, this.slotMachine.spin);
            
             this.app.ticker.add(this.update.bind(this));
 

@@ -4,6 +4,7 @@ import { Reel } from './Reel';
 import { Sound } from '../utils/Sound';
 import { AssetLoader } from '../utils/AssetLoader';
 import {Spine} from "pixi-spine";
+import { GameEvents } from '../utils/GameEvents';
 
 const REEL_COUNT = 4;
 
@@ -15,35 +16,31 @@ const BACKGROUND_COVER_MARGIN_Y = 30;
 
 const HORIZONTAL_CONTENT_MARGIN = 100;
 
-export class SlotMachine {
-    public container: PIXI.Container;
+const SPIN_START_DELAY_PER_REEL = 200; //MS
+const SPIN_SLOW_DOWN_START_DELAY = 500; //MS
+const SPIN_STOP_DELAY_PER_REEL = 400; //MS
+const SPIN_RESULT_DELAY = 1500; //MS
 
-    private app: PIXI.Application;
+export class SlotMachine extends PIXI.Container {
     private contentContainer: PIXI.Container;
     private reels: Reel[];
 
     private winAnimation: Spine | null = null;
     private frameSpine: Spine | null = null;
     private background!: PIXI.Sprite;
-    private spinButton: PIXI.Sprite | null = null;
 
     private displayAreaWidth!: number;
     private displayAreaHeight!: number;
 
     private isSpinning: boolean = false;
 
-    constructor(app: PIXI.Application) {
-        this.app = app;
-        this.container = new PIXI.Container();
+    constructor() {
+        super();
+        
         this.contentContainer = new PIXI.Container();
-
-        this.container.addChild(this.contentContainer);
+        this.addChild(this.contentContainer);
 
         this.reels = [];
-
-        // Center the slot machine
-        this.container.x = this.app.screen.width / 2;
-        this.container.y = this.app.screen.height / 2;
         
         this.initSpineAnimations();
 
@@ -64,7 +61,7 @@ export class SlotMachine {
                     this.frameSpine.state.setAnimation(0, 'idle', true);
                 }
 
-                this.container.addChild(this.frameSpine);
+                this.addChild(this.frameSpine);
             }
 
             const winSpineData = AssetLoader.getSpine('win');
@@ -73,7 +70,7 @@ export class SlotMachine {
 
                 this.winAnimation.visible = false;
 
-                this.container.addChild(this.winAnimation);
+                this.addChild(this.winAnimation);
             }
         } catch (error) {
             console.error('Error initializing spine animations:', error);
@@ -85,6 +82,7 @@ export class SlotMachine {
             const bounds = this.frameSpine!.getLocalBounds();      
 
             this.background = new PIXI.Sprite(AssetLoader.getTexture('background'));
+            this.background.tint = 0x555555;
             this.background.anchor.set(0.5);
 
             this.background.position.set(this.frameSpine!.x, this.frameSpine!.y);
@@ -146,53 +144,38 @@ export class SlotMachine {
         }
     }
 
-    public spin(): void {
+    public spin = async (): Promise<void> => {
         if (this.isSpinning) return;
 
         this.isSpinning = true;
+        this.emit(GameEvents.SpinStarted);
 
         // Play spin sound
         Sound.play('spin');
 
-        // Disable spin button
-        if (this.spinButton) {
-            this.spinButton.texture = AssetLoader.getTexture('spinButtonInactive');
-            this.spinButton.interactive = false;
+        // Start reels one by one
+        for (const reel of this.reels) {
+            reel.startSpin();
+            await SlotMachine.delay(SPIN_START_DELAY_PER_REEL);
         }
 
-        for (let i = 0; i < this.reels.length; i++) {
-            setTimeout(() => {
-                this.reels[i].startSpin();
-            }, i * 200);
+        // Let them spin for a bit
+        await SlotMachine.delay(SPIN_SLOW_DOWN_START_DELAY);
+
+        // Stop reels one by one
+        for (const reel of this.reels) {
+            reel.stopSpin();
+            await SlotMachine.delay(SPIN_STOP_DELAY_PER_REEL);
         }
 
-        // Stop all reels after a delay
-        setTimeout(() => {
-            this.stopSpin();
-        }, 500 + (this.reels.length - 1) * 200);
+        // Wait before showing result
+        await SlotMachine.delay(SPIN_RESULT_DELAY);
 
-    }
+        Sound.stop('spin');
+        this.checkWin();
 
-    private stopSpin(): void {
-        for (let i = 0; i < this.reels.length; i++) {
-            setTimeout(() => {
-                this.reels[i].stopSpin();
-
-                // If this is the last reel, check for wins and enable spin button
-                if (i === this.reels.length - 1) {
-                    setTimeout(() => {
-                        Sound.stop('spin')
-                        this.checkWin();
-                        this.isSpinning = false;
-
-                        if (this.spinButton) {
-                            this.spinButton.texture = AssetLoader.getTexture('spinButtonActive');
-                            this.spinButton.interactive = true;
-                        }
-                    }, 500);
-                }
-            }, i * 400);
-        }
+        this.isSpinning = false;
+        this.emit(GameEvents.SpinFinished);
     }
 
     private checkWin(): void {
@@ -224,8 +207,7 @@ export class SlotMachine {
         }
     }
 
-    public setSpinButton(button: PIXI.Sprite): void {
-        this.spinButton = button;
-    }    
-
+    private static delay(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
 }
