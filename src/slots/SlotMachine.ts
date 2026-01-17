@@ -19,7 +19,7 @@ const HORIZONTAL_CONTENT_MARGIN = 100;
 const SPIN_START_DELAY_PER_REEL = 200; //MS
 const SPIN_SLOW_DOWN_START_DELAY = 500; //MS
 const SPIN_STOP_DELAY_PER_REEL = 400; //MS
-const SPIN_RESULT_DELAY = 1500; //MS
+const SPIN_RESULT_DELAY = 300; //MS
 
 export class SlotMachine extends PIXI.Container {
     private contentContainer: PIXI.Container;
@@ -57,9 +57,7 @@ export class SlotMachine extends PIXI.Container {
             if (frameSpineData) {
                 this.frameSpine = new Spine(frameSpineData);                
 
-                if (this.frameSpine.state.hasAnimation('idle')) {
-                    this.frameSpine.state.setAnimation(0, 'idle', true);
-                }
+                this.setFrameAnimation("static", true);
 
                 this.addChild(this.frameSpine);
             }
@@ -150,6 +148,8 @@ export class SlotMachine extends PIXI.Container {
         this.isSpinning = true;
         this.emit(GameEvents.SpinStarted);
 
+        //Play spin animation
+        this.setFrameAnimation("idle", true);
         // Play spin sound
         Sound.play('spin');
 
@@ -172,6 +172,8 @@ export class SlotMachine extends PIXI.Container {
         await SlotMachine.delay(SPIN_RESULT_DELAY);
 
         Sound.stop('spin');
+        this.setFrameAnimation("static", true);
+
         this.checkWin();
 
         this.isSpinning = false;
@@ -205,6 +207,14 @@ export class SlotMachine extends PIXI.Container {
                 });        
             }
         }
+    }
+
+    private setFrameAnimation(animationName: string, loop: boolean = true): void {
+        if (!this.frameSpine) return;
+
+        if (this.frameSpine.state.hasAnimation(animationName)) {
+            this.frameSpine.state.setAnimation(0, animationName, loop);
+        } 
     }
 
     private static delay(ms: number): Promise<void> {

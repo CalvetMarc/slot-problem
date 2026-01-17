@@ -7,7 +7,7 @@ const SYMBOL_KEYS: ImagesKey[] = [
     'symbol2',
     'symbol3',
     'symbol4',
-    'symbol5',
+    'symbol5'
 ];
 
 const SYMBOL_SIZE = 150;
@@ -15,9 +15,9 @@ const SYMBOLS_PER_REEL = 6;
 const EXTRA_SYMBOLS = 1; // Extra symbols to allow seamless horizontal looping 
 
 const SPIN_SPEED = 50; // Pixels per frame
-const SLOWDOWN_RATE = 0.95; // Rate at which the reel slows down
+const SLOWDOWN_RATE = 0.85; // Rate at which the reel slows down
 
-const STOP_REEL_THRESHOLD = 0.5; // Speed below which the reel stops
+const STOP_REEL_THRESHOLD = 0.2; // Speed below which the reel stops
 
 export class Reel {
     public container: PIXI.Container;
